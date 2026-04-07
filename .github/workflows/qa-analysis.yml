@@ -1,0 +1,28 @@
+name: QA Failure Analysis
+
+on:
+  workflow_run:
+    workflows: ["Playwright Tests"]
+    types:
+      - completed
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Send failure to QA Analyst
+        run: |
+          curl -X POST ${{ secrets.QA_ANALYST_URL }}/analyze \
+            -H "Content-Type: application/json" \
+            -d '{
+              "test_name": "Playwright Test Suite",
+              "error_message": "Test suite failed in CI",
+              "stack_trace": "See GitHub Actions logs for details",
+              "repo": "${{ github.repository }}",
+              "pr_number": ${{ github.event.workflow_run.pull_requests[0].number }}
+            }'
